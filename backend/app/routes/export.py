@@ -27,6 +27,6 @@ def export_video(payload: ExportRequest):
     return ExportResponse(
         project_id=payload.project_id,
         status="queued",
-        url=None,
+        url=f"/exports/{payload.project_id}.{payload.format}",
         message=f"Export queued for {payload.project_id} in {payload.format} at {payload.quality}.",
     )

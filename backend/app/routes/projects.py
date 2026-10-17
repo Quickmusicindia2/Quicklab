@@ -64,3 +64,18 @@ async def analyze_project_video(project_id: str, file: UploadFile = File(...)):
         "status": "analysis_complete",
         "analysis": result,
     }
+
+
+@router.get("/{project_id}/captions")
+def get_captions(project_id: str):
+    if project_id not in PROJECTS:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    return {
+        "project_id": project_id,
+        "captions": [
+            {"start": 0.0, "end": 2.4, "text": "Welcome to Quicklab"},
+            {"start": 2.5, "end": 5.0, "text": "AI-powered editing starts here"},
+            {"start": 5.1, "end": 8.0, "text": "Create your next short in minutes"},
+        ],
+    }

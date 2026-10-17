@@ -19,5 +19,7 @@ async def analyze_video(file: UploadFile) -> dict[str, Any]:
         "captions": [
             {"start": 0.0, "end": 2.4, "text": "Welcome to Quicklab"},
             {"start": 2.5, "end": 5.0, "text": "AI-powered editing starts here"},
+            {"start": 5.1, "end": 8.0, "text": "Create your next short in minutes"},
         ],
+        "ai_summary": "This clip is strong for a short-form edit with an intro hook and clear caption coverage.",
     }

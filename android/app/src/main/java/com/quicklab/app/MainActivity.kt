@@ -96,7 +96,10 @@ fun QuicklabApp(client: OkHttpClient) {
                 Button(onClick = { launcher.launch("video/*") }) {
                     Text("Pick Video")
                 }
-                Button(onClick = { exportStatus = "Export queued" }) {
+                Button(onClick = {
+                    exportStatus = "Export queued"
+                    exportVideo(client, onResult = { exportStatus = it })
+                }) {
                     Text("Export")
                 }
             }
@@ -194,6 +197,25 @@ private fun uploadVideo(
             onResult(body)
         } catch (e: Exception) {
             onResult("Upload failed: ${e.message}")
+        }
+    }.start()
+}
+
+private fun exportVideo(client: OkHttpClient, onResult: (String) -> Unit) {
+    val request = Request.Builder()
+        .url("http://10.0.2.2:8000/api/v1/export")
+        .post(
+            "{\"project_id\":\"proj-0001\",\"format\":\"mp4\",\"quality\":\"1080p\"}".toRequestBody("application/json".toMediaTypeOrNull())
+        )
+        .build()
+
+    Thread {
+        try {
+            val response = client.newCall(request).execute()
+            val body = response.body?.string() ?: "No response body"
+            onResult(body)
+        } catch (e: Exception) {
+            onResult("Export request failed: ${e.message}")
         }
     }.start()
 }
