@@ -1,12 +1,13 @@
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from app.routes.projects import PROJECTS
 from app.services.ai_service import analyze_video
+from app.services.caption_service import generate_captions
 from app.services.media_service import save_upload
+from app.services.scene_service import detect_scenes
 
 router = APIRouter(prefix="/projects", tags=["projects"])
-
-PROJECTS: dict[str, dict] = {}
 
 
 class ProjectCreateRequest(BaseModel):
@@ -58,11 +59,24 @@ async def analyze_project_video(project_id: str, file: UploadFile = File(...)):
     if project_id not in PROJECTS:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    saved_path = await save_upload(project_id, file)
+    project = PROJECTS[project_id]
+    project["video_path"] = saved_path
+    project["status"] = "analyzing"
+
+    cuts = detect_scenes(saved_path)
+    captions = generate_captions(saved_path)
     result = await analyze_video(file)
+
     return {
         "project_id": project_id,
         "status": "analysis_complete",
-        "analysis": result,
+        "analysis": {
+            **result,
+            "scene_count": len(cuts),
+            "scene_boundaries": cuts[:10],
+            "captions": captions[:10],
+        },
     }
 
 

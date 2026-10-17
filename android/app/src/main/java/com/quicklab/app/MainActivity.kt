@@ -73,6 +73,7 @@ fun QuicklabApp(client: OkHttpClient) {
                         CaptionItem("00:02-00:05", "AI-powered editing starts here"),
                         CaptionItem("00:05-00:08", "Create your next short in minutes"),
                     )
+                    exportStatus = "Metadata ready"
                 })
             }
         }
@@ -202,11 +203,13 @@ private fun uploadVideo(
 }
 
 private fun exportVideo(client: OkHttpClient, onResult: (String) -> Unit) {
+    val payload = """
+        {"project_id":"proj-0001","format":"mp4","quality":"1080p"}
+    """.trimIndent()
+
     val request = Request.Builder()
         .url("http://10.0.2.2:8000/api/v1/export")
-        .post(
-            "{\"project_id\":\"proj-0001\",\"format\":\"mp4\",\"quality\":\"1080p\"}".toRequestBody("application/json".toMediaTypeOrNull())
-        )
+        .post(payload.toRequestBody("application/json".toMediaTypeOrNull()))
         .build()
 
     Thread {
