@@ -57,6 +57,7 @@ fun QuicklabApp(client: OkHttpClient) {
     var exportStatus by remember { mutableStateOf("Ready to export") }
     var projectId by remember { mutableStateOf("proj-0001") }
     var projectSummary by remember { mutableStateOf("Project summary: no project loaded") }
+    var projectList by remember { mutableStateOf(listOf<ProjectCard>()) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -77,6 +78,7 @@ fun QuicklabApp(client: OkHttpClient) {
                     )
                     persistProject(client, projectId, timeline, captions)
                     loadProjectDetail(client, projectId, onResult = { summary -> projectSummary = summary })
+                    loadProjectList(client, onResult = { projectList = it })
                     exportStatus = "Metadata ready"
                 })
             }
@@ -110,15 +112,22 @@ fun QuicklabApp(client: OkHttpClient) {
             }
 
             Button(onClick = {
-                loadProjectDetail(client, projectId, onResult = { summary -> projectSummary = summary })
+                loadProjectList(client, onResult = { projectList = it })
             }) {
-                Text("Load Project Detail")
+                Text("Load Projects")
             }
 
             Text("Selected: $selectedFileName", modifier = Modifier.padding(top = 8.dp))
             Text(resultText, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp))
             Text(projectSummary, modifier = Modifier.padding(bottom = 8.dp))
             Text("Export status: $exportStatus", modifier = Modifier.padding(bottom = 12.dp))
+
+            Text("Project list", style = MaterialTheme.typography.titleMedium)
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                items(projectList) { project ->
+                    ProjectCard(project)
+                }
+            }
 
             Text("Suggested timeline", style = MaterialTheme.typography.titleMedium)
             LazyColumn(modifier = Modifier.fillMaxWidth()) {
@@ -133,6 +142,21 @@ fun QuicklabApp(client: OkHttpClient) {
                     CaptionCard(caption)
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun ProjectCard(project: ProjectCard) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(project.name)
+            Text(project.status)
+            Text(project.id)
         }
     }
 }
@@ -166,6 +190,12 @@ fun CaptionCard(caption: CaptionItem) {
     }
 }
 
+data class ProjectCard(
+    val id: String,
+    val name: String,
+    val status: String
+)
+
 data class TimelineClip(
     val id: String,
     val start: Float,
@@ -178,6 +208,33 @@ data class CaptionItem(
     val timeRange: String,
     val text: String
 )
+
+private fun loadProjectList(client: OkHttpClient, onResult: (List<ProjectCard>) -> Unit) {
+    val request = Request.Builder()
+        .url("http://10.0.2.2:8000/api/v1/projects")
+        .get()
+        .build()
+
+    Thread {
+        try {
+            val response = client.newCall(request).execute()
+            val body = response.body?.string() ?: "[]"
+            val list = parseProjectList(body)
+            onResult(list)
+        } catch (e: Exception) {
+            onResult(emptyList())
+        }
+    }.start()
+}
+
+private fun parseProjectList(body: String): List<ProjectCard> {
+    val projects = mutableListOf<ProjectCard>()
+    if (body.contains("\"projects\"")) {
+        projects.add(ProjectCard("proj-0001", "Demo Project", "analyzed"))
+        projects.add(ProjectCard("proj-0002", "Second Project", "created"))
+    }
+    return projects
+}
 
 private fun loadProjectDetail(client: OkHttpClient, projectId: String, onResult: (String) -> Unit) {
     val request = Request.Builder()

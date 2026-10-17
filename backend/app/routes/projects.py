@@ -89,6 +89,7 @@ async def analyze_project_video(project_id: str, file: UploadFile = File(...)):
 
     project["timeline"] = timeline
     project["captions"] = captions[:10]
+    project["status"] = "analyzed"
 
     return {
         "project_id": project_id,

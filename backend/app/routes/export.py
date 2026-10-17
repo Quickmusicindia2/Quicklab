@@ -32,6 +32,9 @@ def export_video_request(payload: ExportRequest):
     output_path = f"/tmp/quicklab/exports/{payload.project_id}.{payload.format}"
     ok, result_path = export_video(input_path, output_path, payload.quality)
 
+    PROJECTS[payload.project_id]["export_url"] = result_path if ok else None
+    PROJECTS[payload.project_id]["status"] = "exported" if ok else "export_failed"
+
     return ExportResponse(
         project_id=payload.project_id,
         status="completed" if ok else "failed",
