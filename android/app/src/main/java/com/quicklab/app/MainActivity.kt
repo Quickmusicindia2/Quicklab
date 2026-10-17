@@ -55,13 +55,14 @@ fun QuicklabApp(client: OkHttpClient) {
     var timeline by remember { mutableStateOf(listOf<TimelineClip>()) }
     var captions by remember { mutableStateOf(listOf<CaptionItem>()) }
     var exportStatus by remember { mutableStateOf("Ready to export") }
+    var projectId by remember { mutableStateOf("proj-0001") }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri ->
             if (uri != null) {
                 selectedFileName = uri.lastPathSegment ?: "selected_video.mp4"
-                uploadVideo(client, uri, onResult = { responseText ->
+                uploadVideo(client, projectId, uri, onResult = { responseText ->
                     resultText = responseText
                     timeline = listOf(
                         TimelineClip("clip-1", 0.0f, 3.0f, "intro", 0.94f),
@@ -73,6 +74,7 @@ fun QuicklabApp(client: OkHttpClient) {
                         CaptionItem("00:02-00:05", "AI-powered editing starts here"),
                         CaptionItem("00:05-00:08", "Create your next short in minutes"),
                     )
+                    persistProject(client, projectId, timeline, captions)
                     exportStatus = "Metadata ready"
                 })
             }
@@ -99,7 +101,7 @@ fun QuicklabApp(client: OkHttpClient) {
                 }
                 Button(onClick = {
                     exportStatus = "Export queued"
-                    exportVideo(client, onResult = { exportStatus = it })
+                    exportVideo(client, projectId, onResult = { exportStatus = it })
                 }) {
                     Text("Export")
                 }
@@ -168,8 +170,41 @@ data class CaptionItem(
     val text: String
 )
 
+private fun persistProject(
+    client: OkHttpClient,
+    projectId: String,
+    timeline: List<TimelineClip>,
+    captions: List<CaptionItem>
+) {
+    val payload = """
+        {
+          "project_id": "$projectId",
+          "timeline": [
+            {"id":"clip-1","start":0.0,"end":3.0,"label":"intro","confidence":0.94},
+            {"id":"clip-2","start":3.0,"end":8.0,"label":"highlight","confidence":0.91},
+            {"id":"clip-3","start":8.0,"end":12.0,"label":"caption-shot","confidence":0.93}
+          ],
+          "captions": [
+            {"start":0.0,"end":2.4,"text":"Welcome to Quicklab"},
+            {"start":2.5,"end":5.0,"text":"AI-powered editing starts here"},
+            {"start":5.1,"end":8.0,"text":"Create your next short in minutes"}
+          ]
+        }
+    """.trimIndent()
+
+    val request = Request.Builder()
+        .url("http://10.0.2.2:8000/api/v1/projects/$projectId/persist")
+        .post(payload.toRequestBody("application/json".toMediaTypeOrNull()))
+        .build()
+
+    Thread {
+        client.newCall(request).execute().close()
+    }.start()
+}
+
 private fun uploadVideo(
     client: OkHttpClient,
+    projectId: String,
     uri: Uri,
     onResult: (String) -> Unit
 ) {
@@ -187,7 +222,7 @@ private fun uploadVideo(
         .build()
 
     val request = Request.Builder()
-        .url("http://10.0.2.2:8000/api/v1/projects/proj-0001/upload")
+        .url("http://10.0.2.2:8000/api/v1/projects/$projectId/upload")
         .post(multipartBody)
         .build()
 
@@ -202,9 +237,9 @@ private fun uploadVideo(
     }.start()
 }
 
-private fun exportVideo(client: OkHttpClient, onResult: (String) -> Unit) {
+private fun exportVideo(client: OkHttpClient, projectId: String, onResult: (String) -> Unit) {
     val payload = """
-        {"project_id":"proj-0001","format":"mp4","quality":"1080p"}
+        {"project_id":"$projectId","format":"mp4","quality":"1080p"}
     """.trimIndent()
 
     val request = Request.Builder()
