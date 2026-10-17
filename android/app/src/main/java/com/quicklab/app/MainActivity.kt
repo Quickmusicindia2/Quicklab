@@ -56,6 +56,7 @@ fun QuicklabApp(client: OkHttpClient) {
     var captions by remember { mutableStateOf(listOf<CaptionItem>()) }
     var exportStatus by remember { mutableStateOf("Ready to export") }
     var projectId by remember { mutableStateOf("proj-0001") }
+    var projectSummary by remember { mutableStateOf("Project summary: no project loaded") }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -75,6 +76,7 @@ fun QuicklabApp(client: OkHttpClient) {
                         CaptionItem("00:05-00:08", "Create your next short in minutes"),
                     )
                     persistProject(client, projectId, timeline, captions)
+                    loadProjectDetail(client, projectId, onResult = { summary -> projectSummary = summary })
                     exportStatus = "Metadata ready"
                 })
             }
@@ -107,8 +109,15 @@ fun QuicklabApp(client: OkHttpClient) {
                 }
             }
 
+            Button(onClick = {
+                loadProjectDetail(client, projectId, onResult = { summary -> projectSummary = summary })
+            }) {
+                Text("Load Project Detail")
+            }
+
             Text("Selected: $selectedFileName", modifier = Modifier.padding(top = 8.dp))
             Text(resultText, modifier = Modifier.padding(top = 8.dp, bottom = 8.dp))
+            Text(projectSummary, modifier = Modifier.padding(bottom = 8.dp))
             Text("Export status: $exportStatus", modifier = Modifier.padding(bottom = 12.dp))
 
             Text("Suggested timeline", style = MaterialTheme.typography.titleMedium)
@@ -169,6 +178,23 @@ data class CaptionItem(
     val timeRange: String,
     val text: String
 )
+
+private fun loadProjectDetail(client: OkHttpClient, projectId: String, onResult: (String) -> Unit) {
+    val request = Request.Builder()
+        .url("http://10.0.2.2:8000/api/v1/projects/$projectId")
+        .get()
+        .build()
+
+    Thread {
+        try {
+            val response = client.newCall(request).execute()
+            val body = response.body?.string() ?: "No project detail"
+            onResult(body)
+        } catch (e: Exception) {
+            onResult("Load failed: ${e.message}")
+        }
+    }.start()
+}
 
 private fun persistProject(
     client: OkHttpClient,
