@@ -1,0 +1,18 @@
+name: Bug report
+about: Create a report to help us improve Quicklab
+title: ""
+labels: ["bug"]
+body:
+  - type: textarea
+    attributes:
+      label: Bug description
+      description: Describe the bug and how to reproduce it
+  - type: textarea
+    attributes:
+      label: Expected behavior
+  - type: textarea
+    attributes:
+      label: Actual behavior
+  - type: textarea
+    attributes:
+      label: Environment
